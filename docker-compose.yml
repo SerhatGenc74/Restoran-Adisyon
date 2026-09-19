@@ -1,0 +1,32 @@
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: rootpassword
+      POSTGRES_DB: adisyon
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      DATABASE_URL: "postgresql://root:rootpassword@db:5432/adisyon?schema=public"
+      JWT_SECRET: "super-secret-key-for-development-only-12345"
+      PORT: 3000
+      API_HOST: "0.0.0.0"
+      DATABASE_TYPE: "postgres" # veya 'sqlite'
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+    restart: unless-stopped
+    command: sh -c "npx prisma migrate deploy && npm start --workspace=@adisyon/api"
+
+volumes:
+  postgres_data:

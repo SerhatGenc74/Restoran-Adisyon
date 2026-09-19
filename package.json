@@ -1,0 +1,35 @@
+{
+  "name": "restraunt-adisyon",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Corbaci adisyon ve masa yonetim sistemi",
+  "workspaces": [
+    "apps/api",
+    "apps/desktop",
+    "packages/shared"
+  ],
+  "scripts": {
+    "dev:api": "npm run dev --workspace=@adisyon/api",
+    "dev:desktop": "npm run dev --workspace=@adisyon/desktop",
+    "dev:tauri": "npm run tauri dev --workspace=@adisyon/desktop",
+    "tauri:build": "npm run tauri build --workspace=@adisyon/desktop",
+    "build": "npm run build --workspaces",
+    "typecheck": "npm run typecheck --workspaces",
+    "db:generate": "prisma generate --schema prisma/schema.prisma",
+    "db:validate": "prisma validate --schema prisma/schema.prisma",
+    "db:migrate": "prisma migrate dev --schema prisma/schema.prisma",
+    "db:studio": "prisma studio --schema prisma/schema.prisma",
+    "db:seed": "prisma db seed"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "@prisma/client": "^6.19.0",
+    "argon2": "^0.31.2",
+    "prisma": "^6.19.0",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  }
+}

@@ -1,0 +1,238 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/@prisma/client-sqlite"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id           String    @id @default(uuid())
+  username     String    @unique
+  passwordHash String    @map("password_hash")
+  displayName  String    @map("display_name")
+  role         String
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  ordersCreated     Order[]       @relation("OrderCreatedBy")
+  ordersServed      Order[]       @relation("OrderServedBy")
+  orderItemsAdded   OrderItem[]   @relation("OrderItemAddedBy")
+  payments          Payment[]
+  kitchenEvents     KitchenEvent[]
+  reports           DailyReport[]
+  openedSessions    CashierSession[] @relation("SessionOpenedBy")
+  closedSessions    CashierSession[] @relation("SessionClosedBy")
+
+  @@map("users")
+}
+
+model Category {
+  id        String    @id @default(uuid())
+  name      String    @unique
+  sortOrder Int       @default(0) @map("sort_order")
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  products Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id          String      @id @default(uuid())
+  categoryId  String      @map("category_id")
+  name        String      
+  type        String
+  price       Float
+  isActive    Boolean     @default(true) @map("is_active")
+  kitchenNote String?     @map("kitchen_note")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  category   Category    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  orderItems OrderItem[]
+
+  @@index([categoryId, isActive])
+  @@index([type, isActive])
+  @@map("products")
+}
+
+model DiningTable {
+  id        String             @id @default(uuid())
+  name      String             @unique
+  capacity  Int?
+  status    String             @default("AVAILABLE")
+  isActive  Boolean            @default(true) @map("is_active")
+  createdAt DateTime           @default(now()) @map("created_at")
+  updatedAt DateTime           @updatedAt @map("updated_at")
+
+  orders Order[]
+
+  @@map("dining_tables")
+}
+
+model Order {
+  id              String      @id @default(uuid())
+  tableId         String?     @map("table_id")
+  orderNumber     Int         @unique @map("order_number")
+  status          String      @default("OPEN")
+  orderType       String      @default("DINE_IN") @map("order_type")
+  note            String?     
+  subtotal        Float       
+  complimentaryTotal Float    @default(0) @map("complimentary_total")
+  discountTotal   Float       @default(0) @map("discount_total")
+  discountReason  String?     @map("discount_reason")
+  total           Float       
+  openedAt        DateTime    @default(now()) @map("opened_at")
+  closedAt        DateTime?   @map("closed_at")
+  createdById     String      @map("created_by_id")
+  servedById      String?     @map("served_by_id")
+
+  table       DiningTable? @relation(fields: [tableId], references: [id], onDelete: Restrict)
+  createdBy   User         @relation("OrderCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  servedBy    User?        @relation("OrderServedBy", fields: [servedById], references: [id], onDelete: Restrict)
+  items       OrderItem[]
+  payments    Payment[]
+  kitchenEvents KitchenEvent[]
+
+  @@index([tableId, status])
+  @@index([status, openedAt])
+  @@index([closedAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id               String          @id @default(uuid())
+  orderId          String          @map("order_id")
+  productId        String          @map("product_id")
+  addedById        String          @map("added_by_id")
+  quantity         Float
+  portion          Float           @default(1.0)
+  unitPrice        Float           @map("unit_price")
+  lineTotal        Float           @map("line_total")
+  status           String          @default("PENDING")
+  isComplimentary  Boolean         @default(false) @map("is_complimentary")
+  complimentaryReason String?      @map("complimentary_reason")
+  note             String?         
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  addedBy User    @relation("OrderItemAddedBy", fields: [addedById], references: [id], onDelete: Restrict)
+  kitchenEvents KitchenEvent[]
+
+  @@index([orderId, status])
+  @@index([productId, createdAt])
+  @@index([isComplimentary, createdAt])
+  @@map("order_items")
+}
+
+model KitchenEvent {
+  id          String          @id @default(uuid())
+  orderId     String          @map("order_id")
+  orderItemId String          @map("order_item_id")
+  fromStatus  String?         @map("from_status")
+  toStatus    String          @map("to_status")
+  changedById String          @map("changed_by_id")
+  createdAt   DateTime        @default(now()) @map("created_at")
+
+  order     Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderItem OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  changedBy User      @relation(fields: [changedById], references: [id], onDelete: Restrict)
+
+  @@index([orderId, createdAt])
+  @@index([orderItemId, createdAt])
+  @@map("kitchen_events")
+}
+
+model Payment {
+  id            String        @id @default(uuid())
+  orderId       String        @map("order_id")
+  receivedById  String        @map("received_by_id")
+  method        String
+  status        String        @default("COMPLETED")
+  amount        Float         
+  transactionRef String?      @map("transaction_ref")
+  isRefund      Boolean       @default(false) @map("is_refund")
+  paidAt        DateTime      @default(now()) @map("paid_at")
+  refundedAt    DateTime?     @map("refunded_at")
+  note          String?       
+
+  order      Order @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  receivedBy User  @relation(fields: [receivedById], references: [id], onDelete: Restrict)
+
+  @@index([paidAt, method, status])
+  @@index([orderId, status])
+  @@map("payments")
+}
+
+model CashierSession {
+  id             String    @id @default(uuid())
+  openedById     String    @map("opened_by_id")
+  closedById     String?   @map("closed_by_id")
+  openedAt       DateTime  @default(now()) @map("opened_at")
+  closedAt       DateTime? @map("closed_at")
+  openingBalance Float     @map("opening_balance")
+  countedBalance Float?    @map("counted_balance")
+  expectedBalance Float?   @map("expected_balance")
+  difference     Float?    
+  status         String    @default("OPEN")
+  
+  openedBy       User      @relation("SessionOpenedBy", fields: [openedById], references: [id], onDelete: Restrict)
+  closedBy       User?     @relation("SessionClosedBy", fields: [closedById], references: [id], onDelete: Restrict)
+
+  @@map("cashier_sessions")
+}
+
+model DailyReport {
+  id                 String   @id @default(uuid())
+  reportDate         DateTime @unique @map("report_date")
+  generatedById      String   @map("generated_by_id")
+  totalRevenue       Float    @map("total_revenue")
+  cashRevenue        Float    @map("cash_revenue")
+  cardRevenue        Float    @map("card_revenue")
+  otherRevenue       Float    @default(0) @map("other_revenue")
+  complimentaryTotal Float    @map("complimentary_total")
+  orderCount         Int      @map("order_count")
+  generatedAt        DateTime @default(now()) @map("generated_at")
+
+  generatedBy User @relation(fields: [generatedById], references: [id], onDelete: Restrict)
+
+  @@map("daily_reports")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  action     String   
+  entityType String   @map("entity_type")
+  entityId   String?  @map("entity_id")
+  payload    String?  // SQLite does not support Json, use String
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@index([entityType, entityId])
+  @@index([action, createdAt])
+  @@map("audit_logs")
+}
+
+model Outbox {
+  id         String   @id @default(uuid())
+  entityId   String   @map("entity_id")
+  entityType String   @map("entity_type")
+  action     String   // CREATE, UPDATE, DELETE
+  payload    String   // JSON as string
+  status     String   @default("PENDING") // PENDING, SYNCED, FAILED
+  error      String?  
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@index([status, createdAt])
+  @@map("outbox")
+}
