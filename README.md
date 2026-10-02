@@ -18,7 +18,7 @@
 1. Depoyu klonlayın:
 
    ```bash
-   git clone <depo-adresi>
+   git clone https://github.com/SerhatGenc74/Restoran-Adisyon.git
    cd Restraunt-adisyon
    ```
 
