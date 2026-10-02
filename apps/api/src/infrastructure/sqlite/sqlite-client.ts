@@ -1,9 +1,10 @@
+// @ts-ignore - SQLite Client Faz 6'da olusturulacak
 import { PrismaClient as SqliteClient } from '@prisma/client-sqlite';
 
 export const sqliteClient = new SqliteClient().$extends({
   query: {
     $allModels: {
-      async $allOperations({ model, operation, args, query }) {
+      async $allOperations({ model, operation, args, query }: { model: any, operation: any, args: any, query: any }) {
         const result = await query(args);
 
         // Capture mutation events for the outbox

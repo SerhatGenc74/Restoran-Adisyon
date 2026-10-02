@@ -32,6 +32,9 @@ jobs:
       - name: Validate Prisma Schema
         run: npm run db:validate
 
+      - name: Build Shared Package
+        run: npm run build --workspace=@adisyon/shared
+
       - name: Typecheck
         run: npm run typecheck
 
