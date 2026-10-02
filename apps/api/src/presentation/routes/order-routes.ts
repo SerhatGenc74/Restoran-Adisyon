@@ -6,12 +6,12 @@ import {
   orderItemUpdateSchema
 } from "@adisyon/shared";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-import { requireAuthentication, requireRoles } from "../authentication/authorization-middleware.js";
-import { application } from "../composition.js";
-import { OrderUseCases, OrderBusinessError } from "../application/orders/order-use-cases.js";
+import { requireAuthentication, requireRoles } from "../middleware/authorization-middleware.js";
+import { application } from "../../composition.js";
+import { OrderUseCases, OrderBusinessError } from "../../application/orders/order-use-cases.js";
 import { z } from "zod";
 
-import { paginationQuerySchema, getOffset, paginate } from "../shared/pagination.js";
+import { paginationQuerySchema, getOffset, paginate } from "../../shared/pagination.js";
 
 const itemParamsSchema = z.object({ id: z.string().uuid(), itemId: z.string().uuid() });
 

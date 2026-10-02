@@ -57,6 +57,18 @@ export class TableUseCases {
     return this.updateDiningTableStatus(id, status);
   }
 
+  async updateTable(id: string, data: { name?: string; capacity?: number; isActive?: boolean }) {
+    const existing = await this.repository.findById(id);
+    if (!existing) throw new TableBusinessError("TABLE_NOT_FOUND", "Masa bulunamadı.");
+    return this.repository.update(id, data);
+  }
+
+  async deleteTable(id: string) {
+    const activeOrder = await this.repository.findActiveOrderForTable(id);
+    if (activeOrder) throw new TableBusinessError("TABLE_HAS_ACTIVE_ORDER", "Masanın aktif adisyonu var.");
+    await this.repository.delete(id);
+  }
+
   private applyStatus(table: DiningTable, status: DiningTableStatus) {
     switch (status) {
       case "AVAILABLE":

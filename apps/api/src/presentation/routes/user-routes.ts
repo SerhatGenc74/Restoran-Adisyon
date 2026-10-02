@@ -4,10 +4,10 @@ import {
   userUpdateSchema
 } from "@adisyon/shared";
 import type { FastifyInstance } from "fastify";
-import { requireRoles } from "../authentication/authorization-middleware.js";
-import { createErrorHandler } from "../shared/error-handler.js";
-import type { UserUseCases } from "../application/users/user-use-cases.js";
-import { UserBusinessError } from "../application/users/user-use-cases.js";
+import { requireRoles } from "../middleware/authorization-middleware.js";
+import { createErrorHandler } from "../../shared/error-handler.js";
+import type { UserUseCases } from "../../application/users/user-use-cases.js";
+import { UserBusinessError } from "../../application/users/user-use-cases.js";
 
 const handleError = createErrorHandler(
   (e): e is UserBusinessError => e instanceof UserBusinessError,
@@ -18,7 +18,7 @@ const handleError = createErrorHandler(
   }
 );
 
-import { paginationQuerySchema, getOffset, paginate } from "../shared/pagination.js";
+import { paginationQuerySchema, getOffset, paginate } from "../../shared/pagination.js";
 
 export async function userRoutes(app: FastifyInstance, useCases: UserUseCases) {
   app.get("/users", { onRequest: [requireRoles("OWNER", "ADMIN")] }, async (request, reply) => {

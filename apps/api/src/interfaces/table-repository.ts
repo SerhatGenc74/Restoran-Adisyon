@@ -24,4 +24,6 @@ export interface TableRepository {
   findById(id: string): Promise<DiningTable | null>;
   findActiveOrderForTable(id: string): Promise<{ id: string } | null>;
   updateStatus(id: string, status: DiningTableStatus): Promise<unknown>;
+  update(id: string, data: { name?: string; capacity?: number; isActive?: boolean }): Promise<DiningTableListItem>;
+  delete(id: string): Promise<void>;
 }

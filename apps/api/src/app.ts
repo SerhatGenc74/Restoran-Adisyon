@@ -2,19 +2,19 @@ import cors from "@fastify/cors";
 import fastifyJwt from "@fastify/jwt";
 import sensible from "@fastify/sensible";
 import Fastify from "fastify";
-import { authenticationRoutes } from "./authentication/authentication-routes.js";
-import { categoryRoutes } from "./catalog/category-routes.js";
-import { productRoutes } from "./catalog/product-routes.js";
-import { tableRoutes } from "./tables/table-routes.js";
-import { orderRoutes } from "./orders/order-routes.js";
-import { paymentRoutes } from "./payments/payment-routes.js";
-import { reportRoutes } from "./reports/report-routes.js";
-import { userRoutes } from "./users/user-routes.js";
-import { cashierRoutes } from "./cashier/cashier-routes.js";
+import { authenticationRoutes } from "./presentation/routes/authentication-routes.js";
+import { categoryRoutes } from "./presentation/routes/category-routes.js";
+import { productRoutes } from "./presentation/routes/product-routes.js";
+import { tableRoutes } from "./presentation/routes/table-routes.js";
+import { orderRoutes } from "./presentation/routes/order-routes.js";
+import { paymentRoutes } from "./presentation/routes/payment-routes.js";
+import { reportRoutes } from "./presentation/routes/report-routes.js";
+import { userRoutes } from "./presentation/routes/user-routes.js";
+import { cashierRoutes } from "./presentation/routes/cashier-routes.js";
 import { createApplication } from "./composition.js";
 
 import fastifyWebsocket from "@fastify/websocket";
-import { kitchenWsRoutes } from "./kitchen/kitchen-ws.js";
+import { kitchenWsRoutes } from "./presentation/routes/kitchen-ws.js";
 import { ApiErrorResponse } from "@adisyon/shared";
 import { broadcastDevLog, addDevClient } from "./shared/dev-console.js";
 
@@ -26,7 +26,10 @@ export function buildApp() {
     throw new Error("JWT_SECRET ortam degiskeni tanimlanmalidir.");
   }
 
-  app.register(cors, { origin: true });
+  app.register(cors, { 
+    origin: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+  });
   app.register(sensible);
   app.register(fastifyJwt, { secret: jwtSecret });
   app.register(fastifyWebsocket);

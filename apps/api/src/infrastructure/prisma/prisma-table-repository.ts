@@ -1,6 +1,6 @@
 import { Prisma, PrismaClient } from "@prisma/client";
 import type { DiningTableStatus } from "../../domain/tables/dining-table.js";
-import type { TableRepository } from "../../interfaces/table-repository.js";
+import type { TableRepository, DiningTableListItem } from "../../interfaces/table-repository.js";
 import { mapDiningTable } from "./mappers/domain-mappers.js";
 
 type Database = PrismaClient | Prisma.TransactionClient;
@@ -54,5 +54,28 @@ export class PrismaTableRepository implements TableRepository {
       where: { id },
       data: { status }
     });
+  }
+
+  async update(id: string, data: { name?: string; capacity?: number; isActive?: boolean }): Promise<DiningTableListItem> {
+    const table = await this.db.diningTable.update({
+      where: { id },
+      data,
+      include: {
+        orders: {
+          where: { status: { in: [...activeOrderStatuses] } },
+          select: { id: true, orderNumber: true, status: true, total: true }
+        }
+      }
+    });
+    return {
+      ...table,
+      status: table.status as DiningTableStatus,
+      capacity: table.capacity,
+      orders: table.orders.map(o => ({ ...o, total: o.total.toNumber() }))
+    };
+  }
+
+  async delete(id: string): Promise<void> {
+    await this.db.diningTable.delete({ where: { id } });
   }
 }

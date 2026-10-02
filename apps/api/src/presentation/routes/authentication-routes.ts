@@ -1,7 +1,7 @@
 import { loginRequestSchema } from "@adisyon/shared";
 import type { FastifyInstance } from "fastify";
-import { requireAuthentication } from "./authorization-middleware.js";
-import { application } from "../composition.js";
+import { requireAuthentication } from "../middleware/authorization-middleware.js";
+import { application } from "../../composition.js";
 
 export async function authenticationRoutes(app: FastifyInstance) {
   app.post("/auth/login", async (request, reply) => {

@@ -1,10 +1,11 @@
 import { entityIdParamsSchema, tableStatusUpdateSchema, tableCreateSchema } from "@adisyon/shared";
+import { z } from "zod";
 import type { FastifyInstance, FastifyReply } from "fastify";
-import { requireAuthentication, requireRoles } from "../authentication/authorization-middleware.js";
-import { application } from "../composition.js";
-import { TableBusinessError, TableUseCases } from "../application/tables/table-use-cases.js";
+import { requireAuthentication, requireRoles } from "../middleware/authorization-middleware.js";
+import { application } from "../../composition.js";
+import { TableBusinessError, TableUseCases } from "../../application/tables/table-use-cases.js";
 
-import { paginationQuerySchema, getOffset, paginate } from "../shared/pagination.js";
+import { paginationQuerySchema, getOffset, paginate } from "../../shared/pagination.js";
 
 export async function tableRoutes(app: FastifyInstance, useCases: TableUseCases = application.tables) {
   app.get("/tables", { onRequest: [requireAuthentication] }, async (request, reply) => {
@@ -46,6 +47,44 @@ export async function tableRoutes(app: FastifyInstance, useCases: TableUseCases 
         const response = handleTableError(error, reply);
         if (response) return response;
         if (isPrismaError(error, "P2025")) return reply.notFound("Masa bulunamadı.");
+        throw error;
+      }
+    }
+  );
+  
+  app.patch(
+    "/tables/:id",
+    { onRequest: [requireRoles("OWNER", "ADMIN")] },
+    async (request, reply) => {
+      const params = entityIdParamsSchema.safeParse(request.params);
+      const body = z.object({ name: z.string().optional(), capacity: z.number().optional(), isActive: z.boolean().optional() }).safeParse(request.body);
+      if (!params.success || !body.success) return reply.badRequest("Geçersiz veri.");
+
+      try {
+        return { table: await useCases.updateTable(params.data.id, body.data) };
+      } catch (error) {
+        if (isPrismaError(error, "P2002")) return reply.conflict("Bu masa adı zaten kullanılıyor.");
+        const response = handleTableError(error, reply);
+        if (response) return response;
+        throw error;
+      }
+    }
+
+  );
+
+  app.delete(
+    "/tables/:id",
+    { onRequest: [requireRoles("OWNER", "ADMIN")] },
+    async (request, reply) => {
+      const params = entityIdParamsSchema.safeParse(request.params);
+      if (!params.success) return reply.badRequest("Geçersiz masa ID.");
+
+      try {
+        await useCases.deleteTable(params.data.id);
+        reply.status(204).send();
+      } catch (error) {
+        const response = handleTableError(error, reply);
+        if (response) return response;
         throw error;
       }
     }

@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { eventBus } from "../shared/event-bus.js";
+import { eventBus } from "../../shared/event-bus.js";
 
 export async function kitchenWsRoutes(app: FastifyInstance) {
   app.get("/ws/kitchen", { websocket: true }, (connection: any, req) => {

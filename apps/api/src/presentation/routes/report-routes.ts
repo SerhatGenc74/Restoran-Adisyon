@@ -1,8 +1,8 @@
 import { dailyReportQuerySchema } from "@adisyon/shared";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-import { requireRoles } from "../authentication/authorization-middleware.js";
-import { application } from "../composition.js";
-import { ReportUseCases, ReportBusinessError } from "../application/reports/report-use-cases.js";
+import { requireRoles } from "../middleware/authorization-middleware.js";
+import { application } from "../../composition.js";
+import { ReportUseCases, ReportBusinessError } from "../../application/reports/report-use-cases.js";
 
 export async function reportRoutes(app: FastifyInstance, useCases: ReportUseCases = application.reports) {
   const handler = async (request: FastifyRequest, reply: FastifyReply) => {

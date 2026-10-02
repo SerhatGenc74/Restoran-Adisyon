@@ -1,8 +1,8 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import { z } from "zod";
-import { requireAuthentication, requireRoles } from "../authentication/authorization-middleware.js";
-import { application } from "../composition.js";
-import { CashierBusinessError, CashierUseCases } from "../application/cashier/cashier-use-cases.js";
+import { requireAuthentication, requireRoles } from "../middleware/authorization-middleware.js";
+import { application } from "../../composition.js";
+import { CashierBusinessError, CashierUseCases } from "../../application/cashier/cashier-use-cases.js";
 
 const openSessionSchema = z.object({
   openingBalance: z.number().min(0)

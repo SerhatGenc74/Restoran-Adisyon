@@ -1,6 +1,6 @@
 import argon2 from "argon2";
 import type { UserRepository } from "../../interfaces/user-repository.js";
-import type { AuthenticatedUser } from "../../authentication/authentication-types.js";
+import type { AuthenticatedUser } from "../../presentation/routes/authentication-types.js";
 
 export class AuthUseCases {
   constructor(private readonly userRepository: UserRepository) {}

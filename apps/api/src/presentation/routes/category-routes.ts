@@ -4,10 +4,10 @@ import {
   entityIdParamsSchema
 } from "@adisyon/shared";
 import type { FastifyInstance } from "fastify";
-import { requireAuthentication, requireRoles } from "../authentication/authorization-middleware.js";
-import { createErrorHandler } from "../shared/error-handler.js";
-import type { CatalogUseCases } from "../application/catalog/catalog-use-cases.js";
-import { CatalogBusinessError } from "../application/catalog/catalog-use-cases.js";
+import { requireAuthentication, requireRoles } from "../middleware/authorization-middleware.js";
+import { createErrorHandler } from "../../shared/error-handler.js";
+import type { CatalogUseCases } from "../../application/catalog/catalog-use-cases.js";
+import { CatalogBusinessError } from "../../application/catalog/catalog-use-cases.js";
 
 const handleError = createErrorHandler(
   (e): e is CatalogBusinessError => e instanceof CatalogBusinessError,
@@ -18,7 +18,7 @@ const handleError = createErrorHandler(
   }
 );
 
-import { paginationQuerySchema, getOffset, paginate } from "../shared/pagination.js";
+import { paginationQuerySchema, getOffset, paginate } from "../../shared/pagination.js";
 
 export async function categoryRoutes(app: FastifyInstance, useCases: CatalogUseCases) {
   app.get("/categories", { onRequest: [requireAuthentication] }, async (request, reply) => {

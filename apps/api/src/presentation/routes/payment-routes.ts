@@ -5,9 +5,9 @@ import {
 } from "@adisyon/shared";
 import type { FastifyInstance, FastifyReply } from "fastify";
 import { z } from "zod";
-import { requireAuthentication, requireRoles } from "../authentication/authorization-middleware.js";
-import { application } from "../composition.js";
-import { PaymentUseCases, PaymentBusinessError } from "../application/payments/payment-use-cases.js";
+import { requireAuthentication, requireRoles } from "../middleware/authorization-middleware.js";
+import { application } from "../../composition.js";
+import { PaymentUseCases, PaymentBusinessError } from "../../application/payments/payment-use-cases.js";
 
 export async function paymentRoutes(app: FastifyInstance, useCases: PaymentUseCases = application.payments) {
   app.post(

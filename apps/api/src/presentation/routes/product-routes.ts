@@ -1,13 +1,15 @@
+import { z } from "zod";
 import {
   entityIdParamsSchema,
   productCreateSchema,
   productUpdateSchema
 } from "@adisyon/shared";
 import type { FastifyInstance } from "fastify";
-import { requireAuthentication, requireRoles } from "../authentication/authorization-middleware.js";
-import { createErrorHandler } from "../shared/error-handler.js";
-import type { CatalogUseCases } from "../application/catalog/catalog-use-cases.js";
-import { CatalogBusinessError } from "../application/catalog/catalog-use-cases.js";
+import { requireAuthentication, requireRoles } from "../middleware/authorization-middleware.js";
+import { createErrorHandler } from "../../shared/error-handler.js";
+import type { CatalogUseCases } from "../../application/catalog/catalog-use-cases.js";
+import { CatalogBusinessError } from "../../application/catalog/catalog-use-cases.js";
+import { paginationQuerySchema, getOffset, paginate } from "../../shared/pagination.js";
 
 const handleError = createErrorHandler(
   (e): e is CatalogBusinessError => e instanceof CatalogBusinessError,
@@ -19,14 +21,16 @@ const handleError = createErrorHandler(
   }
 );
 
-import { paginationQuerySchema, getOffset, paginate } from "../shared/pagination.js";
+const productQuerySchema = paginationQuerySchema.extend({
+  includeInactive: z.string().optional().transform((v) => v === "true")
+});
 
 export async function productRoutes(app: FastifyInstance, useCases: CatalogUseCases) {
   app.get("/products", { onRequest: [requireAuthentication] }, async (request, reply) => {
-    const query = paginationQuerySchema.safeParse(request.query);
+    const query = productQuerySchema.safeParse(request.query);
     if (!query.success) return reply.badRequest("Gecersiz sayfalama parametreleri.");
     const options = { skip: getOffset(query.data), take: query.data.limit };
-    const result = await useCases.listProducts(undefined, options);
+    const result = await useCases.listProducts({ includeInactive: query.data.includeInactive }, options);
     return { products: paginate(result.data, result.total, query.data) };
   });
 
