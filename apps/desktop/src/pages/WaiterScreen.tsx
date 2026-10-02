@@ -162,6 +162,21 @@ function OrderView({ table, onBack }: { table: Table; onBack: () => void }) {
     });
   };
 
+  const cancelOrderMutation = useMutation({
+    mutationFn: async () => {
+      await api.post(`/orders/${activeOrderId}/cancel`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tables"] });
+      queryClient.invalidateQueries({ queryKey: ["orders", activeOrderId] });
+      toast.success("Adisyon tamamen iptal edildi!");
+      onBack();
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || "Adisyon iptal edilemedi.");
+    }
+  });
+
   const submitOrderMutation = useMutation({
     mutationFn: async () => {
       const items = cart.map((item) => ({

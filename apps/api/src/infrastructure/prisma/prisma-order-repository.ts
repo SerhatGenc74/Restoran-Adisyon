@@ -209,7 +209,7 @@ export class PrismaOrderRepository implements OrderRepository, OrderTransaction 
     });
   }
 
-  async updateOrderStatus(orderId: string, status: "OPEN" | "IN_PREPARATION" | "READY" | "SERVED") {
+  async updateOrderStatus(orderId: string, status: "OPEN" | "IN_PREPARATION" | "READY" | "SERVED" | "CANCELLED") {
     await this.db.order.update({ where: { id: orderId }, data: { status } });
   }
 

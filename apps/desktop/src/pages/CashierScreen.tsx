@@ -3,7 +3,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api.js";
 import { useAuthStore } from "../store/auth.js";
 import { toast } from "sonner";
-import { LogOut, Calculator, Banknote, CreditCard } from "lucide-react";
+import { LogOut, Calculator, Banknote, CreditCard, Plus, Package, Trash2, Printer } from "lucide-react";
+import { Receipt } from "../components/ui/Receipt.js";
+import { CashierAddItemModal } from "../components/cashier/CashierAddItemModal.js";
 import type { Table, Order } from "../types/index.js";
 
 function fetchTables(): Promise<{ tables: Table[] }> {
@@ -26,9 +28,15 @@ export function CashierScreen() {
     refetchInterval: 5000
   });
 
-  const occupiedTables = tableData?.tables.filter(
-    (t) => (t.status === "OCCUPIED" && t.orders && t.orders.length > 0) && t.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredTables = tableData?.tables.filter(
+    (t) => t.name.toLowerCase().includes(searchQuery.toLowerCase())
   ) || [];
+  // Sort: OCCUPIED first, then AVAILABLE
+  const sortedTables = [...filteredTables].sort((a, b) => {
+    if (a.status === "OCCUPIED" && b.status !== "OCCUPIED") return -1;
+    if (a.status !== "OCCUPIED" && b.status === "OCCUPIED") return 1;
+    return a.name.localeCompare(b.name);
+  });
 
   return (
     <div className="h-screen flex flex-col bg-slate-50">
@@ -65,7 +73,7 @@ export function CashierScreen() {
             {tablesLoading ? (
               <div className="col-span-full flex justify-center text-slate-500">Yükleniyor...</div>
             ) : (
-              occupiedTables.map((table) => {
+              sortedTables.map((table) => {
                   const isSelected = selectedTable?.id === table.id;
                   return (
                     <button
@@ -87,10 +95,10 @@ export function CashierScreen() {
                   );
                 })
             )}
-            {occupiedTables.length === 0 && !tablesLoading && (
+            {sortedTables.length === 0 && !tablesLoading && (
               <div className="col-span-full flex flex-col items-center justify-center text-slate-500 h-64">
                 <Calculator size={48} className="mb-4 opacity-20" />
-                <p>Aranan kriterde açık masa bulunmuyor.</p>
+                <p>Aranan kriterde masa bulunmuyor.</p>
               </div>
             )}
           </div>
@@ -99,7 +107,10 @@ export function CashierScreen() {
         {/* Right: Payment Details */}
         <div className="w-[450px] bg-white flex flex-col shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.05)]">
           {selectedTable ? (
-            <PaymentView table={selectedTable} onPaymentComplete={() => setSelectedTable(null)} />
+            <PaymentView 
+              table={tableData?.tables.find(t => t.id === selectedTable.id) || selectedTable} 
+              onPaymentComplete={() => setSelectedTable(null)} 
+            />
           ) : (
             <div className="flex-1 flex items-center justify-center text-slate-400">
               <p>Odeme almak icin sol taraftan masa secin.</p>
@@ -115,6 +126,7 @@ function PaymentView({ table, onPaymentComplete }: { table: Table; onPaymentComp
   const queryClient = useQueryClient();
   const activeOrderId = table.orders?.[0]?.id;
   const [partialAmount, setPartialAmount] = useState<string>("");
+  const [showAddModal, setShowAddModal] = useState(false);
 
   const { data: orderData, isLoading } = useQuery({
     queryKey: ["orders", activeOrderId],
@@ -122,8 +134,37 @@ function PaymentView({ table, onPaymentComplete }: { table: Table; onPaymentComp
     enabled: !!activeOrderId,
   });
 
+  const createOrderMutation = useMutation({
+    mutationFn: async () => {
+      const res = await api.post("/orders", { tableId: table.id, items: [] });
+      return res.data.order;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tables"] });
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || "Adisyon açılamadı.");
+    }
+  });
+
+  const cancelOrderMutation = useMutation({
+    mutationFn: async () => {
+      await api.post(`/orders/${activeOrderId}/cancel`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tables"] });
+      queryClient.invalidateQueries({ queryKey: ["orders", activeOrderId] });
+      toast.success("Adisyon tamamen iptal edildi!");
+      onPaymentComplete();
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || "Adisyon iptal edilemedi.");
+    }
+  });
+
   const paymentMutation = useMutation({
     mutationFn: async ({ method, amount }: { method: "CASH" | "CARD", amount: number }) => {
+      if (!activeOrderId) return;
       await api.post(`/orders/${activeOrderId}/pay`, {
         method,
         amount
@@ -134,7 +175,7 @@ function PaymentView({ table, onPaymentComplete }: { table: Table; onPaymentComp
       queryClient.invalidateQueries({ queryKey: ["orders", activeOrderId] });
       toast.success("Odeme alindi!");
     }
-    });
+  });
 
   const total = orderData ? Number(orderData.order.total) : 0;
   const paid = orderData?.order.payments?.reduce((acc: number, p: any) => acc + Number(p.amount), 0) || 0;
@@ -142,11 +183,33 @@ function PaymentView({ table, onPaymentComplete }: { table: Table; onPaymentComp
 
   // If order is paid somehow, close this view
   useEffect(() => {
-    if (orderData && remaining <= 0) {
-      const timer = setTimeout(onPaymentComplete, 100);
-      return () => clearTimeout(timer);
+    if (orderData) {
+      const isPaid = orderData.order.status === "PAID" || (total > 0 && remaining <= 0);
+      if (isPaid) {
+        const timer = setTimeout(onPaymentComplete, 100);
+        return () => clearTimeout(timer);
+      }
     }
-  }, [orderData, remaining, onPaymentComplete]);
+  }, [orderData, remaining, total, onPaymentComplete]);
+
+  // Handle empty table scenario
+  if (!activeOrderId) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-500">
+        <Package size={48} className="mb-4 text-slate-300" />
+        <h3 className="text-xl font-bold text-slate-800 mb-2">{table.name}</h3>
+        <p className="mb-6">Bu masada aktif bir adisyon bulunmuyor.</p>
+        <button
+          onClick={() => createOrderMutation.mutate()}
+          disabled={createOrderMutation.isPending}
+          className="px-6 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-2"
+        >
+          <Plus size={20} />
+          {createOrderMutation.isPending ? "Açılıyor..." : "Yeni Adisyon Aç (Hızlı Satış)"}
+        </button>
+      </div>
+    );
+  }
 
   if (isLoading || !orderData) {
     return <div className="flex-1 flex justify-center p-8 text-slate-500">Adisyon yukleniyor...</div>;
@@ -164,10 +227,23 @@ function PaymentView({ table, onPaymentComplete }: { table: Table; onPaymentComp
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full relative">
+      {/* Hidden Thermal Printer Receipt */}
+      <Receipt order={order as any} tableName={table.name} />
+      
+      {showAddModal && <CashierAddItemModal orderId={activeOrderId} onClose={() => setShowAddModal(false)} />}
       <div className="p-6 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-        <div>
-          <h2 className="text-xl font-bold">{table.name} Tahsilat</h2>
+                <div>
+          <h2 className="text-xl font-bold flex items-center gap-2">
+            {table.name} Tahsilat
+            <button 
+              onClick={() => window.print()}
+              className="ml-2 text-slate-500 hover:text-primary transition-colors bg-slate-200 hover:bg-slate-300 p-1.5 rounded-lg"
+              title="Fiş Çıkart"
+            >
+              <Printer size={16} />
+            </button>
+          </h2>
           <span className="text-sm text-slate-500">Adisyon #{order.orderNumber}</span>
         </div>
         <div className="text-right">
@@ -176,8 +252,29 @@ function PaymentView({ table, onPaymentComplete }: { table: Table; onPaymentComp
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6">
-        <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Adisyon Detayi</h3>
+      <div className="flex-1 overflow-y-auto p-6 flex flex-col">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">Adisyon Detayi</h3>
+                  <div className="flex items-center gap-2">
+          <button 
+            onClick={() => {
+              if(confirm("Tüm adisyonu ve içindeki siparişleri iptal etmek istediğinize emin misiniz?")) {
+                cancelOrderMutation.mutate();
+              }
+            }}
+            disabled={cancelOrderMutation.isPending}
+            className="flex items-center gap-1 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors"
+          >
+            <Trash2 size={14} /> Komple İptal
+          </button>
+          <button 
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-1 text-xs font-bold text-primary bg-primary/10 hover:bg-primary/20 px-3 py-1.5 rounded-lg transition-colors"
+          >
+            <Plus size={14} /> Ürün Ekle
+          </button>
+        </div>
+        </div>
         <div className="space-y-3 mb-8">
           {order.items.map((item) => (
             <div key={item.id} className="flex justify-between text-sm border-b border-slate-100 pb-2">
@@ -241,13 +338,16 @@ function PaymentView({ table, onPaymentComplete }: { table: Table; onPaymentComp
             <span className="font-bold">Nakit</span>
           </button>
           
-          <button
-            onClick={() => handlePayment("CARD")}
+                    <button
+            onClick={() => {
+              toast.info("POS Cihazına gönderiliyor... (Simülasyon)", { duration: 2000 });
+              setTimeout(() => handlePayment("CARD"), 1500);
+            }}
             disabled={paymentMutation.isPending || remaining <= 0}
             className="flex flex-col items-center justify-center p-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl transition-colors disabled:opacity-50 gap-2"
           >
             <CreditCard size={24} />
-            <span className="font-bold">Kredi Karti</span>
+            <span className="font-bold">Kredi Kartı (POS)</span>
           </button>
         </div>
       </div>

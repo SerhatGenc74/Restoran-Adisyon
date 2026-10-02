@@ -64,7 +64,7 @@ export interface OrderTransaction {
   }): Promise<void>;
   listOrderItems(orderId: string): Promise<Array<{ status: OrderItemStatus; lineTotal: DecimalValue; isComplimentary: boolean }>>;
   updateOrderTotals(orderId: string, totals: OrderTotals): Promise<void>;
-  updateOrderStatus(orderId: string, status: "OPEN" | "IN_PREPARATION" | "READY" | "SERVED"): Promise<void>;
+  updateOrderStatus(orderId: string, status: "OPEN" | "IN_PREPARATION" | "READY" | "SERVED" | "CANCELLED"): Promise<void>;
   markTableOccupied(tableId: string): Promise<void>;
   markTableAvailable(tableId: string): Promise<void>;
   moveOrderToTable(orderId: string, newTableId: string): Promise<void>;

@@ -181,6 +181,37 @@ export class OrderUseCases {
     });
   }
 
+  async cancelOrder(orderId: string, changedById: string) {
+    return this.repository.transaction(async (tx) => {
+      const order = await tx.findOrderState(orderId);
+      if (!order) throw new OrderBusinessError("ORDER_NOT_FOUND", "Adisyon bulunamadı.");
+      this.ensureEditableOrder(order);
+
+      const items = await tx.listOrderItems(orderId);
+      
+      // Iptal edilmemis tum kalemleri iptal et
+      const orderDto = await tx.getOrder(orderId) as any;
+      if (orderDto && orderDto.items) {
+        for (const item of orderDto.items) {
+          if (item.status !== "CANCELLED") {
+            await tx.cancelOrderItem(orderId, item.id);
+            await tx.createKitchenEvent({ orderId, orderItemId: item.id, fromStatus: item.status, toStatus: "CANCELLED", changedById });
+          }
+        }
+      }
+
+      await tx.updateOrderStatus(orderId, "CANCELLED");
+      
+      if (orderDto && orderDto.tableId) {
+        await tx.markTableAvailable(orderDto.tableId);
+      }
+      
+      await this.recalculateOrder(tx, orderId);
+      eventBus.emit("kitchen-update");
+      return tx.getOrder(orderId);
+    });
+  }
+
   async cancelOrderItem(orderId: string, itemId: string, changedById: string) {
     return this.repository.transaction(async (tx) => {
       this.ensureEditableOrder(await tx.findOrderState(orderId));

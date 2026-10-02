@@ -8,6 +8,7 @@ import { ProductsTab } from "../components/patron/ProductsTab.js";
 import { CategoriesTab } from "../components/patron/CategoriesTab.js";
 import { UsersTab } from "../components/patron/UsersTab.js";
 import { TablesTab } from "../components/patron/TablesTab.js";
+import { ReportsTab } from "../components/patron/ReportsTab.js";
 
 export function PatronScreen() {
   const [activeTab, setActiveTab] = useState<"dashboard" | "products" | "categories" | "users" | "tables" | "reports">("dashboard");
@@ -71,7 +72,7 @@ export function PatronScreen() {
       {/* Main Content */}
       <main className="flex-1 p-4 md:p-8 overflow-y-auto">
         {activeTab === "dashboard" && <DashboardTab />}
-        {activeTab === "reports" && <div className="text-xl">Geçmiş Raporlar çok yakında eklenecek...</div>}
+        {activeTab === "reports" && <ReportsTab />}
         {activeTab === "products" && <ProductsTab />}
         {activeTab === "categories" && <CategoriesTab />}
         {activeTab === "users" && <UsersTab />}

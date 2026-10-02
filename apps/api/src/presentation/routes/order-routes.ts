@@ -66,7 +66,7 @@ export async function orderRoutes(app: FastifyInstance, useCases: OrderUseCases 
 
   app.post(
     "/orders/:id/items",
-    { onRequest: [requireRoles("WAITER", "OWNER", "ADMIN")] },
+    { onRequest: [requireRoles("WAITER", "CASHIER", "OWNER", "ADMIN")] },
     async (request, reply) => {
       const params = entityIdParamsSchema.safeParse(request.params);
       const body = orderItemCreateSchema.safeParse(request.body);
@@ -81,13 +81,27 @@ export async function orderRoutes(app: FastifyInstance, useCases: OrderUseCases 
 
   app.patch(
     "/orders/:id/items/:itemId",
-    { onRequest: [requireRoles("WAITER", "OWNER", "ADMIN")] },
+    { onRequest: [requireRoles("WAITER", "CASHIER", "OWNER", "ADMIN")] },
     async (request, reply) => {
       const params = itemParamsSchema.safeParse(request.params);
       const body = orderItemUpdateSchema.safeParse(request.body);
       if (!params.success || !body.success) return reply.badRequest("Adisyon kalemi geçersiz.");
       try {
         return { order: await useCases.updateOrderItem(params.data.id, params.data.itemId, body.data) };
+      } catch (error) {
+        return handleOrderError(error, reply);
+      }
+    }
+  );
+
+  app.post(
+    "/orders/:id/cancel",
+    { onRequest: [requireRoles("WAITER", "CASHIER", "OWNER", "ADMIN")] },
+    async (request, reply) => {
+      const params = entityIdParamsSchema.safeParse(request.params);
+      if (!params.success) return reply.badRequest("Adisyon ID geçersiz.");
+      try {
+        return { order: await useCases.cancelOrder(params.data.id, request.user.id) };
       } catch (error) {
         return handleOrderError(error, reply);
       }
@@ -105,17 +119,17 @@ export async function orderRoutes(app: FastifyInstance, useCases: OrderUseCases 
   };
   app.post(
     "/orders/:id/items/:itemId/cancel",
-    { onRequest: [requireRoles("WAITER", "KITCHEN", "OWNER", "ADMIN")] },
+    { onRequest: [requireRoles("WAITER", "CASHIER", "KITCHEN", "OWNER", "ADMIN")] },
     cancelHandler
   );
   app.patch(
     "/orders/:id/items/:itemId/cancel",
-    { onRequest: [requireRoles("WAITER", "KITCHEN", "OWNER", "ADMIN")] },
+    { onRequest: [requireRoles("WAITER", "CASHIER", "KITCHEN", "OWNER", "ADMIN")] },
     cancelHandler
   );
   app.delete(
     "/orders/:id/items/:itemId",
-    { onRequest: [requireRoles("WAITER", "KITCHEN", "OWNER", "ADMIN")] },
+    { onRequest: [requireRoles("WAITER", "CASHIER", "KITCHEN", "OWNER", "ADMIN")] },
     cancelHandler
   );
 

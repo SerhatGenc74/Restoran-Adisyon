@@ -10,3 +10,43 @@
     @apply bg-slate-50 text-slate-900;
   }
 }
+
+@media print {
+  /* Varsayılan olarak her şeyi gizle */
+  body * {
+    visibility: hidden;
+  }
+  
+  /* Sadece print-container ve receipt-print sınıfına sahip olanları göster */
+  .print-container, .print-container * {
+    visibility: visible;
+  }
+  
+  .print-container {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  /* Fiş (Thermal Printer - 80mm) için özel ayarlar */
+  .receipt-print, .receipt-print * {
+    visibility: visible !important;
+  }
+  
+  .receipt-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 78mm;
+    margin: 0;
+    padding: 0;
+    font-family: "Courier New", Courier, monospace;
+    color: #000;
+  }
+
+  .receipt-print .dashed-line {
+    border-top: 1px dashed #000;
+    margin: 4px 0;
+  }
+}
